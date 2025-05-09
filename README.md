@@ -5,7 +5,7 @@ Enjoy lightning-fast builds and hot module replacement while you code with style
 
 ---
 
-##🧱 Project Structure 
+## 🧱 Project Structure 
 .
 ├── public/             # Static assets
 ├── src/                # Source files
@@ -19,7 +19,7 @@ Enjoy lightning-fast builds and hot module replacement while you code with style
 🤝 Contributing
 Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
 
-
+## Made with ❤️ & caffeine by Vibe Coding🔥
 ---
 
 Let me know if you'd like a version with Tailwind CSS setup instructions or if this project includes APIs/backend.
