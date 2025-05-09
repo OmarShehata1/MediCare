@@ -83,7 +83,7 @@ const HeroSection: React.FC = () => {
             </div>
             
             {/* Feature card 2 */}
-            <div className="absolute -top-6 -right-6 bg-white p-4 rounded-lg shadow-lg text-gray-800 max-w-xs hidden md:block">
+            <div className="absolute z-50 -top-6 -right-6 bg-white p-4 rounded-lg shadow-lg text-gray-800 max-w-xs hidden md:block">
               <div className="flex items-start">
                 <div className="bg-primary-100 p-3 rounded-full mr-4">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary-600">
@@ -91,8 +91,8 @@ const HeroSection: React.FC = () => {
                     <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
                   </svg>
                 </div>
-                <div>
-                  <h3 className="font-bold text-sm mb-1">Virtual Consultations</h3>
+                <div >
+                  <h3 className="font-bold text-sm mb-1 ">Virtual Consultations</h3>
                   <p className="text-xs text-gray-600">Talk to our doctors from the comfort of your home</p>
                 </div>
               </div>
