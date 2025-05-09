@@ -6,14 +6,18 @@ Enjoy lightning-fast builds and hot module replacement while you code with style
 ---
 
 ## 🧱 Project Structure 
-.
-├── public/             # Static assets
-├── src/                # Source files
-│   ├── assets/         # Images, logos, etc.
-│   ├── components/     # Reusable components
-│   ├── App.jsx         # Root component
-│   └── main.jsx        # Entry point
+my-app/
+├── public/ # Static assets (favicon, etc.)
+├── src/ # Source code
+│ ├── assets/ # Images and other media
+│ ├── components/ # Reusable components
+│ ├── pages/ # Page-level components (if using routing)
+│ ├── App.jsx # Main app component
+│ └── main.jsx # React app entry point
+├── .gitignore
 ├── index.html
+├── package.json
+├── README.md
 └── vite.config.js
 
 🤝 Contributing
