@@ -68,7 +68,7 @@ const HeroSection: React.FC = () => {
             <div className="absolute -bottom-5 left-1/4 h-16 w-16 bg-secondary-300 rounded-full opacity-20"></div>
             
             {/* Feature card */}
-            <div className="absolute -bottom-6 -left-6 bg-white p-4 rounded-lg shadow-lg text-gray-800 max-w-xs">
+            <div className="absolute -bottom-6 -left-6 z-10 bg-white p-4 rounded-lg shadow-lg text-gray-800 max-w-xs">
               <div className="flex items-start">
                 <div className="bg-primary-100 p-3 rounded-full mr-4">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary-600">
@@ -83,7 +83,7 @@ const HeroSection: React.FC = () => {
             </div>
             
             {/* Feature card 2 */}
-            <div className="absolute z-50 -top-6 -right-6 bg-white p-4 rounded-lg shadow-lg text-gray-800 max-w-xs hidden md:block">
+            <div className="absolute z-10 -top-6 -right-6 bg-white p-4 rounded-lg shadow-lg text-gray-800 max-w-xs hidden md:block">
               <div className="flex items-start">
                 <div className="bg-primary-100 p-3 rounded-full mr-4">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary-600">
