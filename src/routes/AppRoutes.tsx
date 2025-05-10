@@ -18,9 +18,9 @@ const AppRoutes: React.FC = () => {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/booking" element={<ProtectedRoute><BookingForm /></ProtectedRoute>} />
-      <Route path="/dashboard/doctor" element={<ProtectedRoute userType="doctor"><DashboardDoctor /></ProtectedRoute>} />
-      <Route path="/dashboard/client" element={<ProtectedRoute userType="patient"><DashboardClient /></ProtectedRoute>} />
+      <Route path="/booking" element={<BookingForm />} />
+      <Route path="/dashboard/doctor" element={<DashboardDoctor />} />
+      <Route path="/dashboard/client" element={<DashboardClient />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -34,10 +34,12 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, userType }) => {
   const { isAuthenticated, user } = useAuth();
   
+  // If not authenticated, redirect to login
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
   
+  // If a specific user type is required and doesn't match, redirect
   if (userType && user?.type !== userType) {
     return <Navigate to="/" replace />;
   }

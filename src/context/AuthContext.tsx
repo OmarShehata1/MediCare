@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '../types';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { User } from "../types";
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, type: 'doctor' | 'patient') => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -19,79 +19,120 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const API_URL = "https://localhost:7024/api"; // Your backend API URL
 
-  // Check for existing user in localStorage on load
+  // Check for existing user and token in localStorage on load
   useEffect(() => {
-    const storedUser = localStorage.getItem('medicare_user');
-    if (storedUser) {
+    const storedUser = localStorage.getItem("medicare_user");
+    const token = localStorage.getItem("medicare_token");
+
+    if (storedUser && token) {
       setUser(JSON.parse(storedUser));
       setIsAuthenticated(true);
     }
   }, []);
 
-  // Mock login function - in a real app, this would call an API
+  // Login function to call the API
   const login = async (email: string, password: string) => {
     if (!email || !password) {
-      throw new Error('Email and password are required');
+      throw new Error("Email and password are required");
     }
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Determine user type based on email (just for demo purposes)
-    const userType = email.includes('doctor') ? 'doctor' : 'patient';
-    
-    const mockUser: User = {
-      id: Math.floor(Math.random() * 1000),
-      name: email.split('@')[0],
-      email,
-      type: userType,
-      image: userType === 'doctor' 
-        ? 'https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'
-        : 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
-    };
-    
-    setUser(mockUser);
-    setIsAuthenticated(true);
-    localStorage.setItem('medicare_user', JSON.stringify(mockUser));
+
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Invalid credentials");
+      }
+
+      const data = await response.json();
+
+      // Store the token
+      localStorage.setItem("medicare_token", data.token);
+
+      // Extract user info from token or create from email
+      // In a real app, you might want to decode the JWT or make a separate API call
+      // to get the user's profile information
+
+      // For now, assume user type based on email domain or path
+      // This is temporary until we have proper roles/types in the backend
+      const userType = email.includes("doctor") ? "doctor" : "patient";
+
+      const userData: User = {
+        id: 0, // You might want to decode the JWT to get the actual ID
+        name: email.split("@")[0], // Temporary
+        email,
+        type: userType,
+        image:
+          userType === "doctor"
+            ? "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
+            : "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
+      };
+
+      setUser(userData);
+      setIsAuthenticated(true);
+      localStorage.setItem("medicare_user", JSON.stringify(userData));
+    } catch (error) {
+      console.error("Login error:", error);
+      throw error;
+    }
   };
 
-  // Mock register function
-  const register = async (name: string, email: string, password: string, type: 'doctor' | 'patient') => {
+  // Register function to call the API
+  const register = async (name: string, email: string, password: string) => {
     if (!name || !email || !password) {
-      throw new Error('All fields are required');
+      throw new Error("All fields are required");
     }
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const mockUser: User = {
-      id: Math.floor(Math.random() * 1000),
-      name,
-      email,
-      type,
-      image: type === 'doctor' 
-        ? 'https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'
-        : 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
-    };
-    
-    setUser(mockUser);
-    setIsAuthenticated(true);
-    localStorage.setItem('medicare_user', JSON.stringify(mockUser));
+
+    try {
+      console.log("Fetching......");
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: name,
+          email,
+          password,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Registration failed");
+      }
+
+      // After successful registration, login the user
+      // await login(email, password);
+    } catch (error) {
+      console.error("Registration error:", error);
+      throw error;
+    }
   };
 
   // Logout function
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
-    localStorage.removeItem('medicare_user');
+    localStorage.removeItem("medicare_user");
+    localStorage.removeItem("medicare_token");
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, isAuthenticated, login, register, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );
