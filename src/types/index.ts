@@ -4,10 +4,12 @@ export interface Doctor {
   specialty: string;
   rating: number;
   image: string;
-  availability: string[];
+  imageUrl: string; // Added for backend compatibility
   experience: number;
-  education: string;
-  description: string;
+  education?: string;
+  description?: string;
+  isAvailable: boolean;
+  availability?: string[]; // For frontend UI
 }
 
 export interface Testimonial {

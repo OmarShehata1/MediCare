@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-// import { useAuth } from "../../context/AuthContext";
 import { HeartPulse, User, MailIcon, Lock, ArrowRight } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
-const API_URL = "https://localhost:7024/api/Auth";
 const Register: React.FC = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -14,40 +13,8 @@ const Register: React.FC = () => {
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // const { register } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
-
-  const register = async (name: string, email: string, password: string) => {
-    if (!name || !email || !password) {
-      throw new Error("All fields are required");
-    }
-
-    try {
-      console.log("Fetching......");
-      const response = await fetch(`${API_URL}/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: name,
-          email,
-          password,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Registration failed");
-      }
-
-      // After successful registration, login the user
-      // await login(email, password);
-    } catch (error) {
-      console.error("Registration error:", error);
-      throw error;
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,12 +30,12 @@ const Register: React.FC = () => {
     }
 
     try {
-      console.log("Fetching...");
       setLoading(true);
       setError("");
-      // Note: We're not passing accountType to register anymore
-      await register(name, email, password);
-      console.log("registered");
+      // Now passing accountType to register
+      await register(name, email, password, accountType);
+      
+      // Redirect based on account type
       const redirectPath =
         accountType === "doctor" ? "/dashboard/doctor" : "/dashboard/client";
       navigate(redirectPath);

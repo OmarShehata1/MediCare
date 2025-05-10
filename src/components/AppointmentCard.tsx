@@ -6,7 +6,7 @@ import Button from './Button';
 interface AppointmentCardProps {
   appointment: Appointment;
   userType: 'doctor' | 'patient';
-  onStatusChange?: (id: number, status: 'confirmed' | 'cancelled') => void;
+  onStatusChange?: (id: number, status: 'confirmed' | 'cancelled' | 'completed') => void;
 }
 
 const AppointmentCard: React.FC<AppointmentCardProps> = ({ 
@@ -91,7 +91,20 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
           </Button>
         </div>
       )}
-      
+
+      {status === 'confirmed' && userType === 'doctor' && onStatusChange && (
+        <div className="mt-4 flex space-x-2">
+          <Button 
+            variant="primary" 
+            size="sm"
+            onClick={() => onStatusChange(id, 'completed')}
+            leftIcon={<CheckCircle size={16} />}
+          >
+            Mark as Completed
+          </Button>
+        </div>
+      )}
+
       {status === 'pending' && userType === 'patient' && onStatusChange && (
         <div className="mt-4">
           <Button 

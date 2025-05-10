@@ -85,30 +85,6 @@ const Sidebar: React.FC = () => {
                 icon={<Calendar size={20} />}
                 label="Book Appointment"
               />
-              <NavItem 
-                to="/dashboard/client/profile" 
-                icon={<User size={20} />}
-                label="My Profile"
-              />
-              <NavItem 
-                to="/dashboard/client/history" 
-                icon={<FileText size={20} />}
-                label="Medical History"
-              />
-              <NavItem 
-                to="/dashboard/client/doctors" 
-                icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"/>
-                  <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2"/>
-                  <path d="M14 4h-4l-1 5h6Z"/>
-                </svg>}
-                label="Find Doctors"
-              />
-              <NavItem 
-                to="/dashboard/client/settings" 
-                icon={<Settings size={20} />}
-                label="Settings"
-              />
             </ul>
           </nav>
           

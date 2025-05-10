@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { appointments } from '../../data/mockData';
+import { appointmentsApi } from '../../utils/api';
 import Sidebar from './Sidebar';
 import AppointmentsList from './AppointmentsList';
 import { Appointment } from '../../types';
@@ -9,6 +9,27 @@ import { Calendar, Clock, Users, ArrowUpRight } from 'lucide-react';
 const DashboardDoctor: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'upcoming' | 'completed' | 'cancelled'>('upcoming');
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
+  
+  // Fetch appointments from API
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        setLoading(true);
+        const data = await appointmentsApi.getAll();
+        setAppointments(data);
+      } catch (err) {
+        console.error("Failed to fetch appointments:", err);
+        setError("Failed to load appointments");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchAppointments();
+  }, []);
   
   // Filter appointments by status
   const getFilteredAppointments = () => {
@@ -21,14 +42,20 @@ const DashboardDoctor: React.FC = () => {
     }
   };
   
-  const handleStatusChange = (id: number, status: 'confirmed' | 'cancelled') => {
-    // In a real app, this would call an API to update the status
-    console.log('Updating appointment', id, 'to status', status);
-    
-    // Simulate API call
-    setTimeout(() => {
-      alert(`Appointment ${id} has been ${status === 'confirmed' ? 'confirmed' : 'cancelled'}`);
-    }, 500);
+  const handleStatusChange = async (id: number, status: 'confirmed' | 'cancelled' | 'completed') => {
+    try {
+      await appointmentsApi.updateStatus(id, status);
+      
+      // Update local state after successful API call
+      setAppointments(prevAppointments => 
+        prevAppointments.map(app => 
+          app.id === id ? { ...app, status } : app
+        )
+      );
+    } catch (err) {
+      console.error(`Failed to update appointment ${id} to ${status}:`, err);
+      alert(`Failed to update appointment status: ${err}`);
+    }
   };
   
   // Count appointments by status
@@ -41,7 +68,19 @@ const DashboardDoctor: React.FC = () => {
   const cancelledCount = countByStatus('cancelled');
   
   // Get today's appointments
-  const todaysAppointments = appointments.filter(app => app.date === 'June 15, 2025');
+  const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const todaysAppointments = appointments.filter(app => app.date === today);
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex flex-col md:flex-row">
+        <Sidebar />
+        <div className="flex-grow p-8 flex items-center justify-center">
+          <p>Loading appointments...</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col md:flex-row">
@@ -50,6 +89,12 @@ const DashboardDoctor: React.FC = () => {
       <div className="flex-grow p-4 md:p-8 pt-20 md:pt-8 overflow-y-auto">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Welcome, {user?.name}</h1>
+          
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-md">
+              {error}
+            </div>
+          )}
           
           {/* Overview Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

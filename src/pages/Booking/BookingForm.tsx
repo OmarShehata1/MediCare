@@ -1,27 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Calendar, Clock, FileText, Check } from 'lucide-react';
 import { format, addDays } from 'date-fns';
-import { Calendar, Clock, FileText, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { doctors, getDoctorById } from '../../data/mockData';
+
 import { Doctor } from '../../types';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import Button from '../../components/Button';
+import { appointmentsApi, doctorsApi } from "../../utils/api";
 
 const BookingForm: React.FC = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const preSelectedDoctorId = searchParams.get('doctorId');
-  
+  const { user } = useAuth();
+  const queryParams = new URLSearchParams(location.search);
+  const doctorIdFromUrl = queryParams.get("doctorId");
+
+  const [doctorId, setDoctorId] = useState<number>(doctorIdFromUrl ? parseInt(doctorIdFromUrl) : 0);
+  const [date, setDate] = useState<string>("");
+  const [time, setTime] = useState<string>("");
+  const [notes, setNotes] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedTime, setSelectedTime] = useState<string>("");
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [selectedTime, setSelectedTime] = useState<string>('');
-  const [notes, setNotes] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [success, setSuccess] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
   
   // Available times (would normally be loaded based on doctor availability)
   const availableTimes = [
@@ -48,42 +54,98 @@ const BookingForm: React.FC = () => {
   
   const dates = generateDates();
   
-  // Pre-select doctor if doctorId is in URL
+   // Fetch doctors list
   useEffect(() => {
-    if (preSelectedDoctorId) {
-      const doctorId = parseInt(preSelectedDoctorId, 10);
-      const doctor = getDoctorById(doctorId);
-      if (doctor) {
+    const fetchDoctors = async () => {
+      try {
+        setIsLoading(true);
+        const data = await doctorsApi.getAll();
+        setDoctors(data);
+        
+        // If doctor ID is in URL, select that doctor
+        if (doctorIdFromUrl) {
+          const doctor = data.find((d: Doctor) => d.id === parseInt(doctorIdFromUrl));
+          if (doctor) {
+            setSelectedDoctor(doctor);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching doctors:", error);
+        setError("Failed to load doctors. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDoctors();
+  }, [doctorIdFromUrl]);
+  
+ // Handle doctor selection
+  useEffect(() => {
+    if (doctorId > 0 && doctors.length > 0) {
+      const doctor = doctors.find(d => d.id === doctorId);
+      if (doctor && (!selectedDoctor || selectedDoctor.id !== doctor.id)) {
         setSelectedDoctor(doctor);
       }
+    } else if (doctorId === 0 && selectedDoctor !== null) {
+      setSelectedDoctor(null);
     }
-  }, [preSelectedDoctorId]);
-  
+  }, [doctorId, doctors]); // Note we're not adding selectedDoctor as a dependency to avoid loops
+
+  // Update date and time when selections change
+  useEffect(() => {
+    if (selectedDate) {
+      setDate(selectedDate);
+    }
+  }, [selectedDate]);
+
+  useEffect(() => {
+    if (selectedTime) {
+      setTime(selectedTime);
+    }
+  }, [selectedTime]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedDoctor || !selectedDate || !selectedTime) {
-      alert('Please select a doctor, date, and time.');
+    if (!doctorId || !selectedDate || !selectedTime) {
+      setError("Please fill all required fields");
       return;
     }
-    
+
     try {
-      setLoading(true);
+      setIsLoading(true);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Make sure we have the doctor object
+      const doctor = selectedDoctor || doctors.find(d => d.id === doctorId);
+      
+      if (!doctor) {
+        throw new Error("Doctor information not found");
+      }
+      
+      await appointmentsApi.create({
+        doctorId: doctorId,
+        date: selectedDate,
+        time: selectedTime,
+        notes: notes || "",
+        // Add the required fields that were missing
+        status: "pending", // New appointments should be 'pending' by default
+        specialty: doctor.specialty, // Get from selected doctor
+        doctorName: doctor.name, // Get from selected doctor
+        patientName: user?.name || "" // Get from current user
+      });
       
       setSuccess(true);
-      
-      // Redirect to dashboard after 2 seconds
-      setTimeout(() => {
-        navigate('/dashboard/client');
-      }, 2000);
-    } catch (error) {
-      console.error(error);
-      alert('Failed to book appointment. Please try again.');
+      // Don't navigate immediately to show the success message
+    } catch (error: unknown) {
+      console.error("Error booking appointment:", error);
+      if (error instanceof Error) {
+        setError(error.message || "Failed to book appointment. Please try again.");
+      } else {
+        setError("An unknown error occurred. Please try again.");
+      }
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
   
@@ -133,6 +195,12 @@ const BookingForm: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">Book an Appointment</h1>
             <p className="text-gray-600 text-center mb-8">Fill out the form below to schedule your visit with one of our doctors.</p>
             
+            {error && (
+              <div className="mb-6 bg-red-50 text-red-700 p-4 rounded-md border border-red-100">
+                {error}
+              </div>
+            )}
+            
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
               <div className="p-6 border-b border-gray-200">
                 <h2 className="text-xl font-semibold">Patient Information</h2>
@@ -166,7 +234,9 @@ const BookingForm: React.FC = () => {
                       {doctors.map((doctor) => (
                         <div
                           key={doctor.id}
-                          onClick={() => setSelectedDoctor(doctor)}
+                          onClick={() => {
+                            setDoctorId(doctor.id); // This will trigger the above effect
+                          }}
                           className={`
                             flex items-center p-3 border rounded-lg cursor-pointer transition-colors
                             ${selectedDoctor?.id === doctor.id
@@ -263,9 +333,8 @@ const BookingForm: React.FC = () => {
                 <div className="px-6 py-4 bg-gray-50 flex justify-end">
                   <Button
                     type="submit"
-                    variant="primary"
-                    disabled={!selectedDoctor || !selectedDate || !selectedTime || loading}
-                    isLoading={loading}
+                    disabled={!selectedDoctor || !selectedDate || !selectedTime || isLoading}
+                    isLoading={isLoading}
                   >
                     Confirm Booking
                   </Button>

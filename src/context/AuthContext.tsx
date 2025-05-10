@@ -1,50 +1,144 @@
+// src/context/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { User } from "../types";
+ // Adjust the path to your configuration file
+import { jwtDecode } from "jwt-decode";
+import { authApi } from "../utils/api";
+
+const API_URL = "https://localhost:7024/api";
+
+interface JwtPayload {
+  nameid: string;        // User ID
+  unique_name?: string;  // Username
+  name?: string;         // User's name
+  email?: string;        // User's email
+  role?: string;         // User's role
+  "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"?: string; // Microsoft format for role
+}
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<User>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    accountType: "doctor" | "patient"
+  ) => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
-  login: async () => {},
+  isLoading: true,
+  login: async () => ({ id: 0, name: "", email: "", type: "patient", image: "" }),
   register: async () => {},
-  logout: () => {},
+  logout: () => {}
 });
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
+  children
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const API_URL = "https://localhost:7024/api"; // Your backend API URL
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Check for existing user and token in localStorage on load
+  // Check for existing token on load
   useEffect(() => {
-    const storedUser = localStorage.getItem("medicare_user");
-    const token = localStorage.getItem("medicare_token");
+    const checkAuth = async () => {
+      try {
+        console.log("Checking authentication state...");
+        const token = localStorage.getItem("medicare_token");
+        const storedUser = localStorage.getItem("medicare_user");
 
-    if (storedUser && token) {
-      setUser(JSON.parse(storedUser));
-      setIsAuthenticated(true);
-    }
+        console.log("Stored token exists:", !!token);
+        console.log("Stored user exists:", !!storedUser);
+        
+        if (!token) {
+          console.log("No token found, not authenticated");
+          setIsLoading(false);
+          return;
+        }
+
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          console.log("Found stored user:", userData);
+          setUser(userData);
+          setIsAuthenticated(true);
+        } else {
+          console.log("No stored user, extracting from token");
+          // If we have a token but no stored user, decode the token
+          try {
+            const userData = extractUserFromToken(token, ""); // Pass email if available
+            setUser(userData);
+            setIsAuthenticated(true);
+            localStorage.setItem("medicare_user", JSON.stringify(userData));
+          } catch (error) {
+            console.error("Failed to decode token:", error);
+            localStorage.removeItem("medicare_token");
+          }
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
-  // Login function to call the API
-  const login = async (email: string, password: string) => {
-    if (!email || !password) {
-      throw new Error("Email and password are required");
-    }
-
+  // Helper function to extract user data from token
+  const extractUserFromToken = (token: string, email: string): User => {
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const decoded = jwtDecode<JwtPayload>(token);
+      console.log("Decoded token:", decoded);
+      
+      // Extract role - check for different possible locations in the token
+      let userType: "doctor" | "patient" = "patient";
+      
+      // Check all possible locations for role information
+      if (decoded.role) {
+        userType = decoded.role.toLowerCase() === "doctor" ? "doctor" : "patient";
+      } else if (decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"]) {
+        const role = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+        userType = role.toLowerCase() === "doctor" ? "doctor" : "patient";
+      }
+      
+      console.log("Extracted user type:", userType);
+      
+      // Create user object from token claims
+      return {
+        id: parseInt(decoded.nameid || "0"),
+        name: decoded.name || decoded.unique_name || email.split("@")[0],
+        email: decoded.email || email,
+        type: userType,
+        image: userType === "doctor"
+          ? "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
+          : "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
+      };
+    } catch (error) {
+      console.error("Error decoding token:", error);
+      // Return a default user on error
+      return {
+        id: 0,
+        name: "User",
+        email: "",
+        type: "patient",
+        image: "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
+      };
+    }
+  };
+
+  const login = async (email: string, password: string): Promise<User> => {
+    try {
+      // Call your login API
+      const response = await fetch(`${API_URL}/Auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -53,85 +147,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       });
 
       if (!response.ok) {
-        throw new Error("Invalid credentials");
+        const errorText = await response.text();
+        throw new Error(errorText || "Invalid credentials");
       }
 
       const data = await response.json();
-
-      // Store the token
-      localStorage.setItem("medicare_token", data.token);
-
-      // Extract user info from token or create from email
-      // In a real app, you might want to decode the JWT or make a separate API call
-      // to get the user's profile information
-
-      // For now, assume user type based on email domain or path
-      // This is temporary until we have proper roles/types in the backend
-      const userType = email.includes("doctor") ? "doctor" : "patient";
-
-      const userData: User = {
-        id: 0, // You might want to decode the JWT to get the actual ID
-        name: email.split("@")[0], // Temporary
-        email,
-        type: userType,
-        image:
-          userType === "doctor"
-            ? "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
-            : "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-      };
-
+      const token = data.token;
+      
+      // Store token
+      localStorage.setItem("medicare_token", token);
+      
+      // Extract user data directly from the token
+      const userData = extractUserFromToken(token, email);
+      
+      // Store user data
       setUser(userData);
       setIsAuthenticated(true);
       localStorage.setItem("medicare_user", JSON.stringify(userData));
+      
+      console.log("Login successful, user:", userData);
+      
+      // Return the user data
+      return userData;
     } catch (error) {
       console.error("Login error:", error);
       throw error;
     }
   };
 
-  // Register function to call the API
-  const register = async (name: string, email: string, password: string) => {
-    if (!name || !email || !password) {
-      throw new Error("All fields are required");
-    }
-
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+    accountType: "doctor" | "patient"
+  ) => {
     try {
-      console.log("Fetching......");
-      const response = await fetch(`${API_URL}/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: name,
-          email,
-          password,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Registration failed");
-      }
-
-      // After successful registration, login the user
-      // await login(email, password);
+      // For registration, we're not expecting any specific return data
+      // The response might be plain text "Registered successfully"
+      await authApi.register(name, email, password, accountType);
+      
+      // Wait a moment before login to ensure backend has processed the registration
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Try to login with the newly created credentials
+      await login(email, password);
     } catch (error) {
-      console.error("Registration error:", error);
-      throw error;
+      console.error("Registration failed:", error);
+      throw new Error("Registration failed. Please try again.");
     }
   };
 
-  // Logout function
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
-    localStorage.removeItem("medicare_user");
     localStorage.removeItem("medicare_token");
+    localStorage.removeItem("medicare_user");
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated, login, register, logout }}
+      value={{ user, isAuthenticated, isLoading, login, register, logout }}
     >
       {children}
     </AuthContext.Provider>

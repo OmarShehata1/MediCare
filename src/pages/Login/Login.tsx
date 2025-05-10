@@ -1,65 +1,17 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { User } from "../../types";
 
 // import { useAuth } from '../../context/AuthContext';
 import { HeartPulse, MailIcon, Lock, ArrowRight } from "lucide-react";
-const API_URL = "https://localhost:7024/api/Auth";
+import { useAuth } from "../../context/AuthContext";
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
-  // const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
-
-  const login = async (email: string, password: string) => {
-    if (!email || !password) {
-      throw new Error("Email and password are required");
-    }
-
-    try {
-      const response = await fetch(`${API_URL}/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Invalid credentials");
-      }
-
-      const data = await response.json();
-
-      // Store the token
-      localStorage.setItem("medicare_token", data.token);
-
-      const userType = email.includes("doctor") ? "doctor" : "patient";
-
-      const userData: User = {
-        id: 0, // You might want to decode the JWT to get the actual ID
-        name: email.split("@")[0], // Temporary
-        email,
-        type: userType,
-        image:
-          userType === "doctor"
-            ? "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
-            : "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-      };
-
-      setUser(userData);
-      setIsAuthenticated(true);
-      localStorage.setItem("medicare_user", JSON.stringify(userData));
-    } catch (error) {
-      console.error("Login error:", error);
-      throw error;
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,13 +24,18 @@ const Login: React.FC = () => {
     try {
       setLoading(true);
       setError("");
-      await login(email, password);
-
-      // Determine where to redirect based on email (temporary solution)
-      const redirectPath = email.includes("doctor")
-        ? "/dashboard/doctor"
-        : "/dashboard/client";
-      navigate(redirectPath);
+      
+      // Login and receive the user object
+      const userData = await login(email, password);
+      
+      console.log("Login successful, redirecting user:", userData);
+      
+      // Redirect based on user type
+      if (userData?.type === "doctor") {
+        navigate("/dashboard/doctor");
+      } else {
+        navigate("/dashboard/client");
+      }
     } catch (err) {
       setError("Failed to log in. Please check your credentials.");
       console.error(err);

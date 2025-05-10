@@ -1,65 +1,46 @@
 import React from 'react';
-import { Star, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Doctor } from '../types';
+import { Star } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface DoctorCardProps {
-  doctor: Doctor;
-  showBookButton?: boolean;
+  doctor: {
+    id: number;
+    name: string;
+    specialty: string;
+    image: string;
+    rating: number;
+    experience: string;
+  };
 }
 
-const DoctorCard: React.FC<DoctorCardProps> = ({ doctor, showBookButton = true }) => {
-  const { id, name, specialty, rating, image, experience } = doctor;
-  
+const DoctorCard: React.FC<DoctorCardProps> = ({ doctor }) => {
+  const { user } = useAuth();
+  const isPatient = user?.type === 'patient';
+
   return (
-    <div className="card group">
-      <div className="relative overflow-hidden">
-        <img 
-          src={image} 
-          alt={name} 
-          className="w-full h-64 object-cover object-center group-hover:scale-105 transition-transform duration-300" 
-        />
-        <div className="absolute top-0 right-0 bg-primary-600 text-white px-3 py-1 text-sm font-medium">
-          {specialty}
-        </div>
-      </div>
-      
-      <div className="p-5">
-        <h3 className="text-xl font-semibold mb-2">{name}</h3>
+    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+      <img src={doctor.image} alt={doctor.name} className="w-full h-48 object-cover" />
+      <div className="p-4">
+        <h3 className="text-lg font-semibold">{doctor.name}</h3>
+        <p className="text-gray-600 text-sm mb-2">{doctor.specialty}</p>
         
-        <div className="flex items-center text-sm text-gray-500 mb-3">
-          <span className="font-medium">{experience} years experience</span>
+        <div className="flex items-center mb-2">
+          <Star className="h-4 w-4 text-yellow-500 fill-current" />
+          <span className="text-sm text-gray-700 ml-1">{doctor.rating} / 5</span>
+          <span className="text-sm text-gray-500 ml-2">• {doctor.experience}</span>
         </div>
         
-        <div className="flex items-center mb-4">
-          <div className="flex text-yellow-400 mr-2">
-            {[...Array(5)].map((_, i) => (
-              <Star 
-                key={i} 
-                size={16} 
-                fill={i < Math.floor(rating) ? "currentColor" : "none"} 
-                className={i < Math.floor(rating) ? "text-yellow-400" : "text-gray-300"} 
-              />
-            ))}
-          </div>
-          <span className="text-sm text-gray-600">{rating.toFixed(1)}</span>
-        </div>
-        
-        {showBookButton && (
-          <div className="flex justify-between items-center">
-            <Link 
-              to={`/booking?doctorId=${id}`}
-              className="btn-primary flex items-center"
-            >
-              <Calendar size={16} className="mr-2" />
-              Book Appointment
-            </Link>
-            <Link 
-              to={`/booking?doctorId=${id}`}
-              className="text-primary-600 hover:text-primary-700 text-sm font-medium"
-            >
-              View Profile
-            </Link>
+        {isPatient ? (
+          <Link 
+            to={`/booking?doctorId=${doctor.id}`} 
+            className="mt-2 inline-block w-full text-center py-2 px-4 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition"
+          >
+            Book Appointment
+          </Link>
+        ) : (
+          <div className="mt-2 py-2 px-4 bg-gray-100 text-gray-400 rounded-md text-center cursor-not-allowed">
+            Booking Not Available
           </div>
         )}
       </div>
